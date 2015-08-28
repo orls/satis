@@ -3,6 +3,7 @@
 namespace Composer\Satis\Provider;
 
 use Github\Client;
+use Github\ResultPager;
 
 class GithubProvider implements ProviderInterface
 {
@@ -31,18 +32,23 @@ class GithubProvider implements ProviderInterface
      */
     public function getRepositories($organisation)
     {
-        $repositories = array();
-        $organisations = $this->client->organizations()->setPerPage(100);
+        $composerRepositories = array();
+        $paginator  = new ResultPager($this->client);
+        $githubRepositories = $paginator->fetchAll(
+            $this->client->organizations(),
+            'repositories',
+            array($organisation, 'private')
+        );
 
-        foreach ($organisations->repositories($organisation, 'private') as $repository) {
+        foreach ($githubRepositories as $repository) {
             if (!$this->isComposerAware($repository)) {
                 continue;
             }
 
-            $repositories[] = new Repository($repository['full_name'], $repository['git_url']);
+            $composerRepositories[] = new Repository($repository['full_name'], $repository['git_url']);
         }
 
-        return $repositories;
+        return $composerRepositories;
     }
 
     /**
